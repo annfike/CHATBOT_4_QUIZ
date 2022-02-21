@@ -11,7 +11,7 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.longpoll import VkEventType, VkLongPoll
 from vk_api.utils import get_random_id
 
-from main import get_question, make_questions_and_answers
+from utils import get_question, make_questions_and_answers
 
 
 def get_keyboard():
@@ -29,7 +29,9 @@ def handle_new_question_request(event, vk_api, r, questions_and_answers):
     user = event.user_id
     question_and_answer = get_question(questions_and_answers)
     question = question_and_answer[0]
+    answer = question_and_answer[1]
     r.set(user, question)
+    r.set(question, answer)
     keyboard = get_keyboard()
     vk_api.messages.send(
         user_id=user,
@@ -39,42 +41,42 @@ def handle_new_question_request(event, vk_api, r, questions_and_answers):
     )
 
 
-def handle_solution_attempt(event, vk_api, r, questions_and_answers):
+def handle_solution_attempt(event, vk_api, r):
     user = event.user_id
-    if r.get(user):
-        user_answer = event.text
-        question = r.get(user)
-        right_answer = questions_and_answers[question]
-        right_answer = re.split('[.(]',right_answer)[0]
-        match = fuzz.WRatio(user_answer, right_answer) 
-        keyboard = get_keyboard()
-        if match > 70:
-            vk_api.messages.send(
-                user_id=user,
-                random_id=get_random_id(),
-                keyboard=keyboard.get_keyboard(),
-                message='Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос"'
-            )
-        else:
-            vk_api.messages.send(
-                user_id=user,
-                random_id=get_random_id(),
-                keyboard=keyboard.get_keyboard(),
-                message='Неправильно… Попробуешь ещё раз?'
-            )
-    else:
+    if not r.get(user):
         vk_api.messages.send(
             user_id=user,
             random_id=get_random_id(),
             keyboard=keyboard.get_keyboard(),
             message='Привет! Я бот для викторин.'
         )
-        
+
+    user_answer = event.text
+    question = r.get(user)
+    right_answer = r.get(question)
+    right_answer = re.split(r'[.(]',right_answer)[0]
+    match = fuzz.WRatio(user_answer, right_answer) 
+    keyboard = get_keyboard()
+    if match > 70:
+        vk_api.messages.send(
+            user_id=user,
+            random_id=get_random_id(),
+            keyboard=keyboard.get_keyboard(),
+            message='Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос"'
+        )
+    else:
+        vk_api.messages.send(
+            user_id=user,
+            random_id=get_random_id(),
+            keyboard=keyboard.get_keyboard(),
+            message='Неправильно… Попробуешь ещё раз?'
+        )
+    
 
 def handle_give_up(event, vk_api, r, questions_and_answers):
     user = event.user_id
     question = r.get(user)
-    right_answer = questions_and_answers[question]
+    right_answer = r.get(question)
     vk_api.messages.send(
             user_id=user,
             random_id=get_random_id(),
@@ -107,10 +109,10 @@ def main() -> None:
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             if event.text == 'Новый вопрос':
                 handle_new_question_request(event, vk_api, r, questions_and_answers)
-            if event.text == 'Сдаться':
+            elif event.text == 'Сдаться':
                 handle_give_up(event, vk_api, r, questions_and_answers)
             else:
-                handle_solution_attempt(event, vk_api, r, questions_and_answers)
+                handle_solution_attempt(event, vk_api, r)
 
 
 if __name__ == '__main__':

@@ -14,23 +14,19 @@ def make_questions_and_answers(dir):
         for line in file_contents:
             if 'Вопрос' in line:
                 question = line.split('Вопрос')
-                question = re.sub('\d+:', '', question[1]).lstrip()
-                questions.append(question)
+                question = re.sub(r'\d+:', '', question[1]).lstrip()
+                questions.append(question.replace('\n', ' '))
             if 'Ответ' in line:
                 answer = line.split('Ответ')
-                answer = re.sub(':\n', '', answer[1])
-                answers.append(answer)
-        questions = [question.replace('\n', ' ') for question in questions]
-        answers = [answer.replace('\n', ' ') for answer in answers]
+                answer = re.sub(r':\n', '', answer[1])
+                answers.append(answer.replace('\n', ' '))
         questions_and_answers_from_file = dict(zip(questions, answers))
         questions_and_answers = questions_and_answers | questions_and_answers_from_file
     return questions_and_answers
 
 
 def get_question(questions_and_answers):
-    keys = list(questions_and_answers.keys())
-    question = random.choice(keys)
-    answer = questions_and_answers[question]
+    question, answer = random.choice(list(questions_and_answers.items()))
     return question, answer
 
 

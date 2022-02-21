@@ -7,8 +7,8 @@ from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
                           Filters, MessageHandler, Updater)
 from thefuzz import fuzz
-
-from main import get_question, make_questions_and_answers
+import json
+from utils import get_question, make_questions_and_answers
 
 
 CHOOSING = range(1)
@@ -26,8 +26,10 @@ def handle_new_question_request(update: Update, context: CallbackContext):
     questions_and_answers  = context.bot_data['questions_and_answers']
     question_and_answer = get_question(questions_and_answers)
     question = question_and_answer[0]
+    answer = question_and_answer[1]
     r = context.bot_data['redis']
     r.set(user, question)
+    r.set(question, answer)
     update.message.reply_text(question)
     return CHOOSING
 
@@ -37,9 +39,8 @@ def handle_solution_attempt(update: Update, context: CallbackContext):
     user_answer = update.message.text
     r = context.bot_data['redis']
     question = r.get(user)
-    questions_and_answers  = context.bot_data['questions_and_answers']
-    right_answer = questions_and_answers[question]
-    right_answer = re.split('[.(]',right_answer)[0]
+    right_answer = r.get(question)
+    right_answer = re.split(r'[.(]',right_answer)[0]
     match = fuzz.WRatio(user_answer, right_answer) 
     if match > 70:
         update.message.reply_text(text='Правильно! Поздравляю! Для следующего вопроса нажми "Новый вопрос"', 
@@ -54,8 +55,7 @@ def handle_give_up(update: Update, context: CallbackContext):
     user = update.message.chat_id
     r = context.bot_data['redis']
     question = r.get(user)
-    questions_and_answers  = context.bot_data['questions_and_answers']
-    right_answer = questions_and_answers[question]
+    right_answer = r.get(question)
     update.message.reply_text(f'Правильный ответ: {right_answer}')
     handle_new_question_request(update, context)
 
