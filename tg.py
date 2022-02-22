@@ -7,8 +7,7 @@ from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
                           Filters, MessageHandler, Updater)
 from thefuzz import fuzz
-import json
-from utils import get_question, make_questions_and_answers
+from qa import get_question, make_questions_and_answers
 
 
 CHOOSING = range(1)
@@ -28,8 +27,7 @@ def handle_new_question_request(update: Update, context: CallbackContext):
     question = question_and_answer[0]
     answer = question_and_answer[1]
     r = context.bot_data['redis']
-    r.set(user, question)
-    r.set(question, answer)
+    r.set(user, answer)
     update.message.reply_text(question)
     return CHOOSING
 
@@ -38,8 +36,7 @@ def handle_solution_attempt(update: Update, context: CallbackContext):
     user = update.message.chat_id
     user_answer = update.message.text
     r = context.bot_data['redis']
-    question = r.get(user)
-    right_answer = r.get(question)
+    right_answer = r.get(user)
     right_answer = re.split(r'[.(]',right_answer)[0]
     match = fuzz.WRatio(user_answer, right_answer) 
     if match > 70:
@@ -54,8 +51,7 @@ def handle_solution_attempt(update: Update, context: CallbackContext):
 def handle_give_up(update: Update, context: CallbackContext):
     user = update.message.chat_id
     r = context.bot_data['redis']
-    question = r.get(user)
-    right_answer = r.get(question)
+    right_answer = r.get(user)
     update.message.reply_text(f'Правильный ответ: {right_answer}')
     handle_new_question_request(update, context)
 

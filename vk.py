@@ -11,7 +11,7 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.longpoll import VkEventType, VkLongPoll
 from vk_api.utils import get_random_id
 
-from utils import get_question, make_questions_and_answers
+from qa import get_question, make_questions_and_answers
 
 
 def get_keyboard():
@@ -30,8 +30,7 @@ def handle_new_question_request(event, vk_api, r, questions_and_answers):
     question_and_answer = get_question(questions_and_answers)
     question = question_and_answer[0]
     answer = question_and_answer[1]
-    r.set(user, question)
-    r.set(question, answer)
+    r.set(user, answer)
     keyboard = get_keyboard()
     vk_api.messages.send(
         user_id=user,
@@ -52,8 +51,7 @@ def handle_solution_attempt(event, vk_api, r):
         )
 
     user_answer = event.text
-    question = r.get(user)
-    right_answer = r.get(question)
+    right_answer = r.get(user)
     right_answer = re.split(r'[.(]',right_answer)[0]
     match = fuzz.WRatio(user_answer, right_answer) 
     keyboard = get_keyboard()
@@ -75,8 +73,7 @@ def handle_solution_attempt(event, vk_api, r):
 
 def handle_give_up(event, vk_api, r, questions_and_answers):
     user = event.user_id
-    question = r.get(user)
-    right_answer = r.get(question)
+    right_answer = r.get(user)
     vk_api.messages.send(
             user_id=user,
             random_id=get_random_id(),
